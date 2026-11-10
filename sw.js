@@ -4,7 +4,7 @@
 // Live bus arrivals always go to the network.
 // When you change any file, bump VERSION so old caches are cleared.
 
-const VERSION = 'hb-v1.0.0';
+const VERSION = 'hb-v3.0.0';
 const DATA_CACHE = 'hb-data';
 
 const APP_FILES = [
@@ -20,7 +20,12 @@ const APP_FILES = [
   './js/tasks.js',
   './js/bus.js',
   './js/health.js',
-  './js/portfolio.js',
+  './js/plan.js',
+  './js/timetable.js',
+  './js/grades.js',
+  './js/focus.js',
+  './js/weather.js',
+  './js/idp.js',
   './js/settings.js',
   './icons/icon-180.png',
   './icons/icon-192.png',

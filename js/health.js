@@ -5,7 +5,7 @@
 import { state, save } from './store.js';
 import {
   esc, icon, pageHeader, dateKey, addDays, keyToDate, fmtAgo, fmtNum, fmtDayAbs, WEEKDAYS,
-  toast, openSheet, closeSheet, sheetIsOpen, refresh, currentRoute,
+  toast, openSheet, closeSheet, sheetIsOpen, refresh, currentRoute, haptic,
 } from './ui.js';
 import { runShortcut } from './shortcuts.js';
 
@@ -200,7 +200,7 @@ function weekChart() {
     const isToday = i === 6;
     const dayLabel = isToday ? 'Today' : WEEKDAYS[keyToDate(k).getDay()].slice(0, 3);
     const label = `${fmtDayAbs(k)}: ${v == null ? 'no data' : pointLabel(metric, v)}`;
-    const bar = v != null && v > 0 ? `<path class="bar" d="${barPath(x, y(v), bw, top + plotH - y(v))}"/>` : '';
+    const bar = v != null && v > 0 ? `<path class="bar" style="--i:${i}" d="${barPath(x, y(v), bw, top + plotH - y(v))}"/>` : '';
     const valueLabel = i === lastIdx && v != null && v > 0
       ? `<text class="val" x="${x + bw / 2}" y="${y(v) - 6}" text-anchor="middle">${esc(tickLabel(metric, v))}</text>` : '';
     return `<g class="col" tabindex="0" role="img" aria-label="${esc(label)}" data-tip="${esc(label)}" data-x="${(left + slot * i + slot / 2) / W}">
@@ -256,7 +256,7 @@ function render() {
       <span class="tile-label">${m.label}</span>
       <span class="tile-value">${v == null ? '<span class="u">No data</span>' : valueHTML(m, v)}</span>
       <span class="tile-sub">${v == null ? '&nbsp;' : esc(goalText(m, goal))}</span>
-      <span class="meter" role="progressbar" aria-label="${m.label} goal" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></span>
+      <span class="meter" role="progressbar" aria-label="${m.label} goal" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><i class="grow-bar" style="--w:${pct}%"></i></span>
     </div>`;
   };
   const mini = (m) => `<div class="mini"><span class="mini-label">${m.label}</span>
@@ -339,6 +339,7 @@ function finishImport(text) {
   localStorage.removeItem(PENDING_KEY);
   closeSheet();
   refresh();
+  haptic();
   const n = Object.keys(days).length;
   toast(n === 1 ? 'Health numbers added' : `Health numbers added for ${n} days`);
 }

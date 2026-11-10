@@ -2,10 +2,10 @@
 // "Remind me" hands the task to Apple Reminders through a shortcut, so the
 // iPhone alerts you even when Homebase is closed.
 
-import { state, save, uid } from './store.js';
+import { state, save, uid, subjects, subjectColor } from './store.js';
 import {
-  esc, icon, pageHeader, dateKey, keyToDate, addDays, dayDiff, fmtDay, fmtDayAbs, fmtTime,
-  toLocalInput, toast, openSheet, closeSheet, refresh, armed,
+  esc, icon, dateKey, keyToDate, addDays, dayDiff, fmtDay, fmtDayAbs, fmtTime,
+  toLocalInput, toast, openSheet, closeSheet, refresh, armed, haptic, confetti,
 } from './ui.js';
 import { sendReminder } from './shortcuts.js';
 
@@ -59,7 +59,7 @@ function dueHTML(t) {
 export function taskRow(t) {
   const meta = [
     `<span class="tag tag-${esc(t.type)}">${esc(typeLabel(t.type))}</span>`,
-    t.subject ? `<span class="subj">${esc(t.subject)}</span>` : '',
+    t.subject ? `<span class="subj"><i style="background:${subjectColor(t.subject)}"></i>${esc(t.subject)}</span>` : '',
     dueHTML(t),
     t.remindAt && !t.done ? `<span class="rem" title="Reminder set">${icon('bell', 14)}<span class="sr">Reminder set</span></span>` : '',
   ].filter(Boolean).join('');
@@ -73,7 +73,7 @@ export function taskRow(t) {
   </div>`;
 }
 
-function render() {
+export function renderBody() {
   const matches = (t) => filter === 'all' || t.type === filter;
   const open = state.tasks.filter((t) => !t.done && matches(t));
   const done = state.tasks.filter((t) => t.done && matches(t)).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
@@ -107,8 +107,7 @@ function render() {
     </section>`;
   }
 
-  return pageHeader('Tasks', { right: `<button class="icon-btn" data-action="task-new" aria-label="New task">${icon('plus', 22)}</button>` }) +
-    `<div class="chips" role="toolbar" aria-label="Filter tasks">${chips}</div>${body}`;
+  return `<div class="chips" role="toolbar" aria-label="Filter tasks">${chips}</div>${body}`;
 }
 
 /* ---------- Add / edit sheet ---------- */
@@ -142,7 +141,6 @@ export function defaultRemind(due, time) {
 function taskSheet(task, prefill = {}) {
   const isNew = !task;
   const t = task || { title: '', type: 'homework', subject: '', due: '', time: '', notes: '', remindAt: '', ...prefill };
-  const subjects = [...new Set(state.tasks.map((x) => x.subject).filter(Boolean))].sort();
   const remindValue = t.remindAt || defaultRemind(t.due, t.time);
   return `<form data-form="task-save" class="sheet-form" autocomplete="off">
     <input type="hidden" name="id" value="${esc(t.id || '')}">
@@ -156,7 +154,7 @@ function taskSheet(task, prefill = {}) {
       `<label><input type="radio" name="type" value="${x.id}"${t.type === x.id ? ' checked' : ''}><span>${x.label}</span></label>`).join('')}</div>
     <div class="group">
       <label class="field"><span>Subject</span><input name="subject" list="subject-list" maxlength="40" placeholder="Chemistry" value="${esc(t.subject)}"></label>
-      <datalist id="subject-list">${subjects.map((s) => `<option value="${esc(s)}"></option>`).join('')}</datalist>
+      <datalist id="subject-list">${subjects().map((s) => `<option value="${esc(s)}"></option>`).join('')}</datalist>
       <label class="field${t.due ? '' : ' is-empty'}"><span>Due</span><input class="opt" type="date" name="due" value="${esc(t.due)}" data-change="task-due"></label>
       <label class="field${t.time ? '' : ' is-empty'}"><span>Time</span><input class="opt" type="time" name="time" value="${esc(t.time)}" data-change="task-due"></label>
     </div>
@@ -167,6 +165,7 @@ function taskSheet(task, prefill = {}) {
     </div>
     <p class="hint">Reminders go to Apple Reminders through your “${esc(state.settings.reminderShortcut)}” shortcut. <button type="button" class="inline-link" data-action="go-guide" data-section="reminders">How to set it up</button></p>
     ${isNew ? '' : `<div class="group">
+      ${t.done ? '' : `<button type="button" class="row-btn" data-action="focus-new" data-id="${esc(t.id)}">${icon('timer', 20)}<span class="lbl">Start a focus session on this</span></button>`}
       ${t.remindAt ? `<button type="button" class="row-btn" data-action="task-remind-again" data-id="${esc(t.id)}">${icon('bell', 20)}<span class="lbl">Add to Reminders again</span></button>` : ''}
       <button type="button" class="row-btn danger" data-action="task-delete" data-id="${esc(t.id)}">${icon('trash', 20)}<span class="lbl">Delete task</span></button>
     </div>`}
@@ -206,6 +205,8 @@ export const actions = {
     t.done = !t.done;
     t.doneAt = t.done ? Date.now() : 0;
     save();
+    haptic();
+    if (t.done) celebrate(el);
     el.closest('.task')?.classList.toggle('is-done', t.done);
     el.setAttribute('aria-pressed', String(t.done));
     clearTimeout(refreshTimer);
@@ -246,6 +247,14 @@ export const actions = {
     toast('Task deleted');
   },
 
+  'task-restore': () => {
+    if (!lastDeleted) return;
+    state.tasks.splice(lastDeleted.index, 0, lastDeleted.task);
+    lastDeleted = null;
+    save();
+    refresh();
+  },
+
   'task-remind-again': (el) => {
     const t = state.tasks.find((x) => x.id === el.dataset.id);
     if (!t) return;
@@ -253,6 +262,28 @@ export const actions = {
     fireReminder(t);
   },
 };
+
+/** Confetti when the last task due today (or overdue) gets ticked off. */
+function celebrate(el) {
+  const today = dateKey();
+  const dueToday = state.tasks.filter((t) => t.due && t.due <= today);
+  if (dueToday.length && dueToday.every((t) => t.done)) {
+    const r = el.getBoundingClientRect();
+    confetti(r.left + r.width / 2, r.top);
+  }
+}
+
+/** Swipe handlers (see main.js): right completes, left deletes with an undo. */
+let lastDeleted = null;
+export function swipeDone(id, el) { actions['task-toggle'](el.querySelector('.check') || el); }
+export function swipeDelete(id) {
+  const i = state.tasks.findIndex((t) => t.id === id);
+  if (i < 0) return;
+  lastDeleted = { task: state.tasks.splice(i, 1)[0], index: i };
+  save();
+  refresh();
+  toast('Task deleted', { action: 'task-restore', actionLabel: 'Undo' });
+}
 
 export const changes = {
   'task-remind': (el) => {
@@ -310,4 +341,3 @@ export const forms = {
   },
 };
 
-export const view = { title: () => 'Tasks', render };

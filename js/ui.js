@@ -46,10 +46,112 @@ const PATHS = {
   arrowUp: '<path d="M12 19V5.5M6.5 11L12 5.5l5.5 5.5"/>',
   arrowDown: '<path d="M12 5v13.5M6.5 13l5.5 5.5 5.5-5.5"/>',
   download: '<path d="M12 4v11M7.6 10.8L12 15.2l4.4-4.4"/><path d="M5 19.5h14"/>',
+  plan: '<rect x="3.5" y="5" width="17" height="15.5" rx="3.2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8.2 14.8l2.3 2.3 4.6-4.6"/>',
+  idp: '<path d="M12 4.5L2.5 9.3 12 14l9.5-4.7z"/><path d="M6.5 11.6v4.6c1.5 1.4 3.4 2.1 5.5 2.1s4-.7 5.5-2.1v-4.6M21.5 9.3v5.2"/>',
+  timer: '<circle cx="12" cy="13.2" r="7.6"/><path d="M12 9v4.4l2.8 1.8M9.6 2.8h4.8"/>',
+  play: '<path d="M8 5.2v13.6a.6.6 0 0 0 .9.5l11-6.8a.6.6 0 0 0 0-1L8.9 4.7a.6.6 0 0 0-.9.5z" fill="currentColor" stroke="none"/>',
+  pause: '<rect x="6.5" y="5" width="4" height="14" rx="1.2" fill="currentColor" stroke="none"/><rect x="13.5" y="5" width="4" height="14" rx="1.2" fill="currentColor" stroke="none"/>',
+  flag: '<path d="M5.5 21V4M5.5 4.8c4.2-2.2 6.8 2 13 0v8.6c-6.2 2-8.8-2.2-13 0"/>',
+  pin: '<path d="M12 21.2s-6.6-5.9-6.6-11A6.6 6.6 0 0 1 12 3.6a6.6 6.6 0 0 1 6.6 6.6c0 5.1-6.6 11-6.6 11z"/><circle cx="12" cy="10.2" r="2.3"/>',
+  minimize: '<path d="M5.5 9.5l6.5 6.5 6.5-6.5"/>',
+  flame: '<path d="M12 21c3.6 0 6.4-2.6 6.4-6.2 0-2.6-1.4-4.4-2.6-5.9-.6 1.4-1.3 2-2.2 2.3.3-2.9-.8-5.8-3.4-7.7.2 2.6-.9 4.2-2.2 5.8-1.2 1.5-2.4 3.1-2.4 5.5C5.6 18.4 8.4 21 12 21z"/>',
 };
 
 export function icon(name, size = 24) {
   return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${PATHS[name] || ''}</svg>`;
+}
+
+/* ---------- Motion: rings, count-up, haptics, confetti ---------- */
+
+export const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Progress ring. The arc animates from empty when .ring gets .go (see animateIn). */
+export function ring(pct, { size = 64, stroke = 7, color = 'var(--tasks)', label = '' } = {}) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const p = Math.max(0, Math.min(1, pct || 0));
+  return `<svg class="ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${esc(label)}">
+    <circle class="ring-track" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}" style="stroke:${color}"/>
+    <circle class="ring-arc" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}" style="stroke:${color};--c:${c};--off:${c * (1 - p)}"
+      stroke-dasharray="${c}" transform="rotate(-90 ${size / 2} ${size / 2})"/></svg>`;
+}
+
+/** Starts ring and bar animations and counts numbers up inside `root`. */
+export function animateIn(root) {
+  const still = reducedMotion();
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    root.querySelectorAll('.ring, .grow-bar').forEach((el) => el.classList.add('go'));
+  }));
+  root.querySelectorAll('[data-count]').forEach((el) => {
+    const to = Number(el.dataset.count);
+    if (still || !Number.isFinite(to) || to === 0) { el.textContent = fmtNum(to); return; }
+    const t0 = performance.now();
+    const dur = 700;
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / dur);
+      el.textContent = fmtNum(Math.round(to * (1 - (1 - k) ** 3)));
+      if (k < 1 && el.isConnected) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+/** A light tap on iPhones (Safari 17.4+ ticks when a switch control flips); silent elsewhere. */
+let hapticLabel = null;
+export function haptic() {
+  try {
+    if (!hapticLabel) {
+      hapticLabel = document.createElement('label');
+      hapticLabel.setAttribute('aria-hidden', 'true');
+      hapticLabel.style.cssText = 'position:fixed;left:-99px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
+      hapticLabel.innerHTML = '<input type="checkbox" switch tabindex="-1">';
+      document.body.appendChild(hapticLabel);
+    }
+    hapticLabel.click();
+  } catch { /* no haptics here */ }
+}
+
+/** A one-second burst of paper bits from a point (used when the day's tasks are all done). */
+export function confetti(x = window.innerWidth / 2, y = window.innerHeight / 3) {
+  if (reducedMotion()) return;
+  const cv = document.createElement('canvas');
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = window.innerWidth * dpr;
+  cv.height = window.innerHeight * dpr;
+  cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:90;pointer-events:none';
+  document.body.appendChild(cv);
+  const ctx = cv.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const colors = ['#FFB000', '#FF375F', '#0A84FF', '#30D158', '#BF5AF2'];
+  const bits = Array.from({ length: 70 }, (_, i) => {
+    const a = Math.random() * Math.PI * 2;
+    const v = 4 + Math.random() * 9;
+    return { x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 5, r: Math.random() * 6, s: 4 + Math.random() * 5, c: colors[i % colors.length] };
+  });
+  const t0 = performance.now();
+  const frame = (t) => {
+    const age = (t - t0) / 1400;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    for (const b of bits) {
+      b.vy += 0.32; b.vx *= 0.985; b.x += b.vx; b.y += b.vy; b.r += 0.2;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, 1 - age);
+      ctx.translate(b.x, b.y); ctx.rotate(b.r);
+      ctx.fillStyle = b.c; ctx.fillRect(-b.s / 2, -b.s / 4, b.s, b.s / 2);
+      ctx.restore();
+    }
+    if (age < 1) requestAnimationFrame(frame); else cv.remove();
+  };
+  requestAnimationFrame(frame);
+}
+
+/** Minutes since midnight for "HH:MM". */
+export const toMin = (hhmm) => { const [h, m] = String(hhmm || '0:0').split(':').map(Number); return h * 60 + (m || 0); };
+export const nowMin = (d = new Date()) => d.getHours() * 60 + d.getMinutes();
+export function fmtDur(min) {
+  const m = Math.max(0, Math.round(min));
+  if (m < 60) return `${m} min`;
+  return m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${Math.floor(m / 60)} h`;
 }
 
 /* ---------- Dates (all local time) ---------- */

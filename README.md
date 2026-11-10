@@ -1,6 +1,6 @@
 # Homebase
 
-A personal iPhone app for homework and tasks, live bus arrivals, Apple Health numbers and an Ngee Ann Poly EAE portfolio. It's a web app: once it's on your Home Screen it opens full screen like any other app, works offline, and keeps all its data on your iPhone.
+A personal iPhone app for a student on the SST-NP Integrated Diploma Programme: a live Today screen (current lesson, weather, buses), tasks, timetable, grades, a focus timer, Apple Health numbers, and an IDP hub for the capstone, NP course shortlist and portfolio. It's a web app: once it's on your Home Screen it opens full screen like any other app, works offline, and keeps all its data on your iPhone.
 
 ## 1. Put it online (free, about 5 minutes)
 
@@ -75,6 +75,10 @@ The parser accepts numbers with units (`4.6 km`, `318 kcal`), sleep in seconds, 
 - Everything is saved in the app's local storage on your iPhone. Removing Homebase from your Home Screen deletes it, so use **Settings > Export a backup** now and then.
 - Bus arrivals come from ArriveLah (`arrivelah2.busrouter.sg`), a free proxy for LTA DataMall's Bus Arrival API. The stop list comes from BusRouter SG (`data.busrouter.sg`). Neither needs a key. If ArriveLah ever goes down, LTA DataMall gives out free keys, but it blocks requests from web pages, so you'd need a small proxy (a Cloudflare Worker works) and to change `ARRIVALS_URL` in `js/bus.js`.
 
+## Updating from version 1
+
+Upload every file in this folder to the same repository, replacing the old ones (delete `js/portfolio.js`, it's no longer used). Your saved data on the phone carries over. Close and reopen Homebase twice to pick up the new version.
+
 ## Changing the app
 
 | File | What it does |
@@ -85,7 +89,10 @@ The parser accepts numbers with units (`4.6 km`, `318 kcal`), sleep in seconds, 
 | `js/tasks.js` | Tasks and reminders |
 | `js/bus.js` | Bus boards, search, nearby |
 | `js/health.js` | Health import, tiles, chart |
-| `js/portfolio.js` | EAE write-ups, evidence, interview notes |
+| `js/plan.js`, `js/timetable.js`, `js/grades.js` | Plan tab: timetable and grades |
+| `js/focus.js` | Focus timer |
+| `js/weather.js` | NEA weather (data.gov.sg) |
+| `js/idp.js` | Capstone, NP courses, key dates, portfolio |
 | `js/settings.js` | Settings and the setup guide |
 | `js/shortcuts.js` | Links to the Shortcuts app |
 | `styles.css` | All styling, light and dark |

@@ -2,7 +2,7 @@
 // Nothing is sent anywhere. Use Settings > Export a backup to keep a copy.
 
 const KEY = 'homebase.v1';
-export const VERSION = '1.0';
+export const VERSION = '3.0';
 
 export function defaults() {
   return {
@@ -11,8 +11,18 @@ export function defaults() {
       name: '',
       reminderShortcut: 'Homebase Reminder',
       healthShortcut: 'Homebase Health',
-      goals: { steps: 8000, exercise: 30, sleep: 8 },
+      goals: { steps: 8000, exercise: 30, sleep: 8, focus: 60 },
       setup: { reminder: false, hideCard: false },
+      area: '',
+      subjectColors: {},
+    },
+    timetable: [],
+    grades: [],
+    focus: { sessions: [], active: null, lastMinutes: 25 },
+    idp: {
+      capstone: { title: '', partner: '', mentor: '', role: '', milestones: [], log: [] },
+      courses: [],
+      dates: [],
     },
     tasks: [],
     bus: { favorites: [] },
@@ -100,6 +110,36 @@ export function importJSON(text) {
   }
   state = merge(defaults(), data);
   saveNow();
+}
+
+/** Subjects the user has typed anywhere, plus a starter list. */
+const STARTER_SUBJECTS = ['English', 'Chinese', 'A Math', 'E Math', 'Physics', 'Chemistry', 'Computing', 'Geography', 'Social Studies'];
+export function subjects() {
+  const used = [
+    ...state.timetable.map((l) => l.subject),
+    ...state.tasks.map((t) => t.subject),
+    ...state.grades.map((g) => g.subject),
+  ].filter(Boolean);
+  const seen = new Set();
+  return [...used, ...STARTER_SUBJECTS].filter((s) => {
+    const k = s.toLowerCase();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+/** Each subject keeps one colour for good: assigned the first time it's used. */
+export const SUBJECT_COLORS = ['#FF375F', '#FF9F0A', '#30B0C7', '#34C759', '#5E5CE6', '#BF5AF2', '#0A84FF', '#AC8E68', '#FF6482', '#00C7BE'];
+export function subjectColor(name) {
+  const key = String(name || '').trim().toLowerCase();
+  if (!key) return '#8E8E93';
+  const map = state.settings.subjectColors;
+  if (map[key] == null) {
+    map[key] = Object.keys(map).length % SUBJECT_COLORS.length;
+    save();
+  }
+  return SUBJECT_COLORS[map[key] % SUBJECT_COLORS.length];
 }
 
 export function eraseAll() {

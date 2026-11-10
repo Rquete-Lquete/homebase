@@ -27,6 +27,7 @@ function renderSettings() {
       <div class="group">
         <label class="field"><span>Steps</span><input name="goal-steps" type="number" inputmode="numeric" min="500" max="60000" step="500" value="${s.goals.steps}" data-input="settings-field"></label>
         <label class="field"><span>Exercise (minutes)</span><input name="goal-exercise" type="number" inputmode="numeric" min="5" max="300" step="5" value="${s.goals.exercise}" data-input="settings-field"></label>
+        <label class="field"><span>Focus (minutes)</span><input name="goal-focus" type="number" inputmode="numeric" min="10" max="600" step="5" value="${s.goals.focus || 60}" data-input="settings-field"></label>
         <label class="field"><span>Sleep (hours)</span><input name="goal-sleep" type="number" inputmode="decimal" min="4" max="14" step="0.5" value="${s.goals.sleep}" data-input="settings-field"></label>
       </div></section>
 
@@ -43,7 +44,7 @@ function renderSettings() {
       ${s.setup.hideCard ? `<button class="row-btn" data-action="setup-show"><span class="lbl">Show the setup checklist on Today</span></button>` : ''}
       <div class="row about"><span>Version</span><span class="muted">${esc(VERSION)}</span></div>
     </div></section>
-    <p class="credit">Bus arrival times are from LTA DataMall through the ArriveLah API. Bus stops are from BusRouter SG.</p>`;
+    <p class="credit">Bus arrival times are from LTA DataMall through the ArriveLah API. Bus stops are from BusRouter SG. Weather is from the National Environment Agency through data.gov.sg.</p>`;
 }
 
 function importSheetHTML(message = '') {
@@ -129,6 +130,8 @@ function renderGuide() {
         <li>Your data lives only on this iPhone. Export a backup from Settings now and then.</li>
         <li>For <b>Stops near me</b>, allow location when asked. If you said no, turn it on in Settings > Privacy & Security > Location Services.</li>
         <li>Bus times refresh every 30 seconds while a board is on screen.</li>
+        <li>Swipe a task right to tick it off, or left to delete it.</li>
+        <li>The focus timer can’t alert you if you leave Homebase, so keep it open while it runs.</li>
       </ul></div></section>`;
 }
 
@@ -154,6 +157,7 @@ export const inputs = {
       case 'healthShortcut': s.healthShortcut = v.trim() || 'Homebase Health'; break;
       case 'goal-steps': if (num(v) > 0) s.goals.steps = Math.round(num(v)); break;
       case 'goal-exercise': if (num(v) > 0) s.goals.exercise = Math.round(num(v)); break;
+      case 'goal-focus': if (num(v) > 0) s.goals.focus = Math.round(num(v)); break;
       case 'goal-sleep': if (num(v) > 0) s.goals.sleep = num(v); break;
       default: return;
     }

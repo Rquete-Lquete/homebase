@@ -131,7 +131,7 @@ function destName(service) {
 
 function etaHTML(b, i) {
   if (!b) return '<span class="eta none" aria-hidden="true">–</span>';
-  return `<span class="eta${i ? ' later' : ''}${b.live ? '' : ' sched'}">
+  return `<span class="eta${i ? ' later' : ''}${b.live ? '' : ' sched'}${!i && etaText(b.t) === 'Arr' ? ' arriving' : ''}">
     <span class="glow" aria-hidden="true"><span class="led" data-eta="${b.t}">${etaText(b.t)}</span></span>
     <i class="load load-${esc(b.load || 'NA')}" aria-hidden="true"></i><span class="sr">${esc(etaSpoken(b))}</span></span>`;
 }
@@ -177,6 +177,7 @@ export function boardHTML(code, { fav = null, compact = false, head = true } = {
     ${head ? `<button class="board-head" data-action="bus-open" data-code="${esc(code)}">
       <span class="bh-title">${esc(title)}</span><span class="bh-sub">${esc(sub)}</span></button>` : ''}
     <div class="board-rows">${rowsHTML(code, services, compact)}</div>
+    <i class="sweep" aria-hidden="true"></i>
   </div>`;
 }
 
@@ -185,12 +186,18 @@ export function updateBoards() {
     const rows = el.querySelector('.board-rows');
     const services = el.dataset.filter ? el.dataset.filter.split(',') : [];
     if (rows) rows.innerHTML = rowsHTML(el.dataset.board, services, el.classList.contains('compact'));
+    const sweep = el.querySelector('.sweep');
+    if (sweep) { sweep.classList.remove('run'); void sweep.offsetWidth; sweep.classList.add('run'); }
   });
 }
 
 function tickEtas() {
   document.querySelectorAll('[data-eta]').forEach((el) => {
-    el.textContent = etaText(Number(el.dataset.eta));
+    const text = etaText(Number(el.dataset.eta));
+    if (el.textContent === text) return;
+    el.textContent = text;
+    el.classList.remove('flip'); void el.offsetWidth; el.classList.add('flip');
+    el.closest('.eta')?.classList.toggle('arriving', text === 'Arr' && !el.closest('.eta').classList.contains('later'));
   });
 }
 
@@ -206,7 +213,7 @@ export function startPolling() {
   if (polling) return;
   polling = true;
   setInterval(() => { if (!document.hidden) refreshVisible(true); }, REFRESH_MS);
-  setInterval(() => { if (!document.hidden) tickEtas(); }, 10000);
+  setInterval(() => { if (!document.hidden) tickEtas(); }, 5000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshVisible(true); });
   if (state.bus.favorites.length) loadStops().then(updateBoards).catch(() => {});
 }
@@ -359,10 +366,8 @@ export function todaySection() {
   const favs = state.bus.favorites;
   if (!favs.length) {
     return `<section class="section"><div class="section-head"><h2>Buses</h2></div>
-      <div class="group"><button class="row-btn cta" data-action="tab" data-tab="bus">
-        <span class="cta-ic cta-bus">${icon('bus', 20)}</span>
-        <span class="cta-text"><span class="cta-title">Add your bus stops</span><span class="cta-sub">See live arrivals here before you leave.</span></span>
-        ${icon('chevRight', 16)}</button></div></section>`;
+      <button class="board ghost" data-action="tab" data-tab="bus"><span class="glow"><span class="led">+</span></span>
+        <span class="ghost-text"><b>Add your bus stops</b><span>Live arrival times show up here before you leave.</span></span></button></section>`;
   }
   const period = new Date().getHours() < 12 ? 'am' : 'pm';
   let pick = favs.filter((f) => (f.show || 'always') === 'always' || f.show === period);
