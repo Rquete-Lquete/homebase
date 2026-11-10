@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en-SG">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Homebase</title>
+  <meta name="description" content="Tasks, buses, health and portfolio in one place.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Homebase">
+  <!-- "default": since iOS 26.1 the status bar takes the page background colour,
+       and black-translucent leaves a gap at the bottom of Home Screen apps. -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <div class="statusbar" aria-hidden="true"></div>
+  <div class="topbar" aria-hidden="true"><span id="topbar-title"></span></div>
+  <main id="view" class="view"></main>
+  <nav id="tabbar" class="tabbar" aria-label="Sections"></nav>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="sheet-root" class="sheet-root"></div>
+  <noscript><p class="noscript">Homebase needs JavaScript turned on.</p></noscript>
+</body>
+</html>
